@@ -81,13 +81,60 @@ async def main():
         await bouton_spectator_contree.click()
         print("✅ Contree Spectator Button clicked.")
 
-        # --- FIN ---
-        print("⏳ Arrival in Lobby...")
-        await page.wait_for_timeout(5000)
-        await page.screenshot(path="lobby_final.png")
-        print("🏁 Finished.")
+        # --- PHASE 2: TABLE HUNTING LOOP ---
+        print("\n🔎 STARTING TABLE ANALYSIS LOOP")
 
+        match_found = False
+        max_attempts = 20  # Safety limit to prevent infinite loops
+        current_attempt = 0
+
+        while not match_found and current_attempt < max_attempts:
+            current_attempt += 1
+            print(f"🔄 Check #{current_attempt}: Analyzing table type...")
+
+            # We wait a bit for the table UI to load
+            await page.wait_for_timeout(2000)
+
+            # Selector for the Tournament/Target Indicator
+            target_selector = '#tournamentMatchInfo'
+
+            # Check if the element exists
+            is_target_present = await page.locator(target_selector).is_visible()
+
+            if is_target_present:
+                print("✅ TARGET FOUND! This is a Tournament Match.")
+                print("🏆 <div id='tournamentMatchInfo'> detected.")
+                match_found = True
+                # The loop ends here, we stay on this page.
+            else:
+                print("❌ Standard table detected. Looking for 'Next Table' button...")
+
+                # Selector for "See another table"
+                next_table_btn = page.locator('button[data-i18n="gui.online.tables.other-table"]')
+
+                if await next_table_btn.is_visible():
+                    print("➡️ Clicking 'See another table'...")
+                    await next_table_btn.click()
+                    # Wait for the reload
+                    print("⏳ Switching tables...")
+                    await page.wait_for_timeout(3000)
+                else:
+                    print("⛔ CRITICAL: 'Next Table' button not found!")
+                    print("Maybe we are back in the lobby? Stopping script.")
+                    break
+
+        # --- FINAL STATE ---
+        if match_found:
+            print("\n🎉 SUCCESS: We are observing the correct table type.")
+            await page.screenshot(path="success_target_table.png")
+            print("📸 Proof saved as 'success_target_table.png'")
+        else:
+            print("\nFAILED: Target table not found after max attempts.")
+
+        # Keep browser open for a bit to inspect
+        await page.wait_for_timeout(5000)
         await browser.close()
+        print("🏁 Script finished.")
 
 
 if __name__ == "__main__":
