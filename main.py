@@ -8,6 +8,26 @@ CIBLED_URL = "https://app.belote-rebelote.fr/"
 EMAIL = "contrai-michel@proton.me"
 FIXED_CODE = "0343"
 
+async def get_players(page) -> dict:
+    """Extracts player names from the 4 cardinal positions."""
+    positions = ['nord', 'sud', 'est', 'ouest']
+    players = {}
+
+    print("👥 Identifying players...")
+    for pos in positions:
+        # We construct the selector dynamically: #nord div[data-role="badge"]
+        selector = f"#{pos} div[data-role='badge']"
+
+        # Wait a brief moment to ensure UI is rendered
+        try:
+            name = await page.inner_text(selector, timeout=2000)
+            players[pos] = name
+        except Exception:
+            players[pos] = "Unknown"
+            print(f"⚠️ Could not find player name for {pos}")
+
+    print(f"✅ Players found: {players}")
+    return players
 
 async def main():
     print("🚀 Bot starts...")
@@ -126,6 +146,10 @@ async def main():
         # --- FINAL STATE ---
         if match_found:
             print("\n🎉 SUCCESS: We are observing the correct table type.")
+
+            # 1. Player Identification
+            players = await get_players(page)
+
             await page.screenshot(path="success_target_table.png")
             print("📸 Proof saved as 'success_target_table.png'")
         else:
